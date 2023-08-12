@@ -1,5 +1,4 @@
-import os
-from dotenv import load_dotenv
+import bot
 
-load_dotenv()
-BOT_TOKEN = os.getenv('TOKEN')
+if __name__ == '__main__':
+    bot.run_discord_bot()
