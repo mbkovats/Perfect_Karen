@@ -15,7 +15,7 @@ BOT_TOKEN = os.getenv('TOKEN')
 YT_TOKEN = os.getenv('YT_TOKEN')
 
 FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
-YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist':'True'}
+YDL_OPTION = {'format': 'bestaudio', 'noplaylist':'True'}
 intents = discord.Intents.default()
 intents.message_content = True
 client = commands.Bot(command_prefix = '/', intents=intents)
@@ -52,88 +52,72 @@ async def noah(ctx):
     source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio('16WheelTruck.mp3'))
     ctx.voice_client.play(source, after=lambda e: print(f'Player error: {e}') if e else None)
 
-# @client.command()
-# async def play(ctx, url):
-#     voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
-#     if voice == None:
-#         await join(ctx)
-#     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-#         info = ydl.extract_info(url, download=False)
-    
-#     # OUTPUT_DIR = 'output'
-#     # if not os.path.exists(OUTPUT_DIR):
-#     #     os.mkdir(OUTPUT_DIR)
-#     # output_file = os.path.join(OUTPUT_DIR, f'run20.tsv')
-#     # print(f'Writing to {output_file}')
-#     # with open(output_file, 'w', encoding='utf-16') as f:
-#     #     f.write('...')
-#     # with open(output_file, 'a', encoding='utf-16') as f:
-#     #     new = json.dumps(info, indent = 4)
-#     #     f.write(new)
-#     # pepep = json.dumps(info, indent = 4)
-#     # print(pepep)
-#     voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
-#     # print(info['playlist_index'])
-#     # try:
-#     #     if info['_type'] == 'playlist':
-#     for video in range(info['playlist_count']):
-#         source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(info['entries'][video]['url'], **FFMPEG_OPTIONS)) 
-#         ctx.voice_client.play(source, after=lambda e: print(f'Player error: {e}') if e else None)
-#         # start = time.time()
-#         # while time.time() < start + 11:
-#         #     pass
-#         #     print('hit1')
-#         print('hit2')
 song_queue = []
-#Search videos from key-words or links
-def search(arg):
-    try: requests.get("".join(arg))
-    except: arg = " ".join(arg)
-    else: arg = "".join(arg)
-    with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
-        info = ydl.extract_info(f"ytsearch:{arg}", download=False)['entries'][0]
-        
+def search(query):
+    try: requests.get("".join(query))
+    except: query = " ".join(query)
+    else: query = "".join(query)
+    with yt_dlp.YoutubeDL(YDL_OPTION) as ydl:
+        info = ydl.extract_info(f"ytsearch:{query}", download=False)['entries'][0]
     return {'source': info['url'], 'title': info['title']}
 
-def search_playlist(arg):
-    try: requests.get("".join(arg))
-    except: arg = " ".join(arg)
-    else: arg = "".join(arg)
+def link(query):
+    try: requests.get("".join(query))
+    except: query = " ".join(query)
+    else: query = "".join(query)
+    with yt_dlp.YoutubeDL(YDL_OPTION) as ydl:
+        info = ydl.extract_info(query, download=False)
+    return {'source': info['url'], 'title': info['title']}
+
+def search_first_playlist(query, YDL_OPTIONS):
+    try: requests.get("".join(query))
+    except: query = " ".join(query)
+    else: query = "".join(query)
     with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
-        info = ydl.extract_info(arg, download=False)
+        info = ydl.extract_info(query, download=False)
     song_queue.append({'source': info['entries'][0]['url'], 'title': info['entries'][0]['title']})
-    for i in range(1,info['playlist_count']):
-        song_queue.append({'source': info['entries'][i]['url'], 'title': info['entries'][i]['title']})
     return {'source': info['entries'][0]['url'], 'title': info['entries'][0]['title']}
 
+def search_playlist(query, YDL_OPTIONS):
+    try: requests.get("".join(query))
+    except: query = " ".join(query)
+    else: query = "".join(query)
+    with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
+        info = ydl.extract_info(query, download=False)
+    for i in range(info['playlist_count'] - 1):
+        song_queue.append({'source': info['entries'][i]['url'], 'title': info['entries'][i]['title']})
+
 #Plays the next song in the queue
-async def play_next(ctx):
+def play_next(ctx):
     voice = get(client.voice_clients, guild=ctx.guild)
     if len(song_queue) > 1:
         del song_queue[0]
         voice.play(discord.FFmpegPCMAudio(song_queue[0]['source'], **FFMPEG_OPTIONS), after=lambda e: play_next(ctx))
         voice.is_playing()
-        await ctx.send(f"`Now Playing: {song_queue[0]['title']}`")
-
-def get_length(arg):
-    try: requests.get("".join(arg))
-    except: arg = " ".join(arg)
-    else: arg = "".join(arg)
-    with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
-        info = ydl.extract_info(arg, download=False)
-    return info['playlist_count']
+    
+# def get_length(query):
+#     try: requests.get("".join(query))
+#     except: query = " ".join(query)
+#     else: query = "".join(query)
+#     with yt_dlp.YoutubeDL(YDL_OPTION) as ydl:
+#         info = ydl.extract_info(query, download=False)
+#     return info['playlist_count']
 
 @client.command()
-async def play(ctx, *arg):
+async def play(ctx, *query):
     channel = ctx.message.author.voice.channel
-
     if channel:
         voice = get(client.voice_clients, guild=ctx.guild)
-        if arg[0].find("playlist") == -1:
-            song = search(arg)
+        print(query[0])
+        if query[0].find("playlist") != -1:
+            YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist':'True', 'playlist_items': '1'}
+            song = search_first_playlist(query, YDL_OPTIONS)
+        elif query[0].find("https") != -1:
+            song = link(query)
             song_queue.append(song)
         else:
-            song = search_playlist(arg)
+            song = search(query)
+            song_queue.append(song)
         if voice and voice.is_connected():
             await voice.move_to(channel)
         else: 
@@ -142,15 +126,25 @@ async def play(ctx, *arg):
             voice.play(discord.FFmpegPCMAudio(song['source'], **FFMPEG_OPTIONS), after=lambda e: play_next(ctx))
             voice.is_playing()
             await ctx.send(f"`Now Playing: {song['title']}`")
-        elif arg[0].find("playlist") == -1:
-            await ctx.send("Added to queue")
+            if query[0].find("playlist") != -1:
+                YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist':'True', 'playliststart': '2'}
+                search_playlist(query, YDL_OPTIONS)
+        elif query[0].find("playlist") == -1:
+            await ctx.send(f"`Added {song['title']} to queue`")
+            YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist':'True', 'playlist_items': '1'}
+            search_first_playlist(query, YDL_OPTIONS)
+            YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist':'True', 'playliststart': '2'}
+            search_playlist(query, YDL_OPTIONS)
     else:
         await ctx.send("You're not connected to any channel!")
 
 @client.command()
 async def queue(ctx):
-    for i in range(len(song_queue)):
-        await ctx.send(f"`{i + 1}. {song_queue[i]['title']}`")
+    await ctx.send(f"`Playing: {song_queue[0]['title']}`")
+    out = ""
+    for i in range(1,len(song_queue)):
+        out = out + (f"`{i}. {song_queue[i]['title']}`\n")
+    await ctx.send(f"{out}")
 
 @client.command()
 async def shuffle(ctx):
@@ -162,5 +156,10 @@ async def skip(ctx):
     voice = get(client.voice_clients, guild=ctx.guild)
     voice.pause()
     await play_next(ctx)
+    await ctx.send(f"`Now Playing: {song_queue[0]['title']}`")   
 
+@client.command()
+async def move(ctx, *query):
+    song_queue[int(query[0])], song_queue[int(query[1])] = song_queue[int(query[1])], song_queue[int(query[0])]
+    await ctx.send(f"`Moved {int(query[0])}. {song_queue[int(query[0])]['title']} to position {int(query[1])}`")
 client.run(BOT_TOKEN)
