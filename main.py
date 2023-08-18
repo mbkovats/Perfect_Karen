@@ -8,6 +8,7 @@ import yt_dlp
 import time
 import json
 import requests
+import copy
 
 load_dotenv()
 BOT_TOKEN = os.getenv('TOKEN')
@@ -90,15 +91,6 @@ def search(arg):
     except: arg = " ".join(arg)
     else: arg = "".join(arg)
     with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
-        var = ydl.extract_info(f"ytsearch:{arg}", download=False)
-        OUTPUT_DIR = 'output'
-        if not os.path.exists(OUTPUT_DIR):
-            os.mkdir(OUTPUT_DIR)
-        output_file = os.path.join(OUTPUT_DIR, f'run21.tsv')
-        print(f'Writing to {output_file}')
-        with open(output_file, 'w', encoding='utf-16') as f:
-            new = json.dumps(var, indent = 4)
-            f.write(new)
         info = ydl.extract_info(f"ytsearch:{arg}", download=False)['entries'][0]
         
     return {'source': info['url'], 'title': info['title']}
@@ -115,13 +107,14 @@ def search_playlist(arg):
     return {'source': info['entries'][0]['url'], 'title': info['entries'][0]['title']}
 
 #Plays the next song in the queue
-def play_next(ctx):
+async def play_next(ctx):
     voice = get(client.voice_clients, guild=ctx.guild)
     if len(song_queue) > 1:
         del song_queue[0]
         voice.play(discord.FFmpegPCMAudio(song_queue[0]['source'], **FFMPEG_OPTIONS), after=lambda e: play_next(ctx))
         voice.is_playing()
-        
+        await ctx.send(f"`Now Playing: {song_queue[0]['title']}`")
+
 def get_length(arg):
     try: requests.get("".join(arg))
     except: arg = " ".join(arg)
@@ -148,9 +141,26 @@ async def play(ctx, *arg):
         if not voice.is_playing():
             voice.play(discord.FFmpegPCMAudio(song['source'], **FFMPEG_OPTIONS), after=lambda e: play_next(ctx))
             voice.is_playing()
-        else:
-            song_queue.append(song)
+            await ctx.send(f"`Now Playing: {song['title']}`")
+        elif arg[0].find("playlist") == -1:
             await ctx.send("Added to queue")
     else:
         await ctx.send("You're not connected to any channel!")
+
+@client.command()
+async def queue(ctx):
+    for i in range(len(song_queue)):
+        await ctx.send(f"`{i + 1}. {song_queue[i]['title']}`")
+
+@client.command()
+async def shuffle(ctx):
+    random.shuffle(song_queue)
+    await ctx.send(f"`Shuffled!`")
+
+@client.command()
+async def skip(ctx):
+    voice = get(client.voice_clients, guild=ctx.guild)
+    voice.pause()
+    await play_next(ctx)
+
 client.run(BOT_TOKEN)
