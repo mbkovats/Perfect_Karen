@@ -5,10 +5,7 @@ import os
 from dotenv import load_dotenv
 import random
 import yt_dlp
-import time
-import json
 import requests
-import copy
 
 load_dotenv()
 BOT_TOKEN = os.getenv('TOKEN')
@@ -155,8 +152,11 @@ async def shuffle(ctx):
 async def skip(ctx):
     voice = get(client.voice_clients, guild=ctx.guild)
     voice.pause()
-    await play_next(ctx)
-    await ctx.send(f"`Now Playing: {song_queue[0]['title']}`")   
+    if song_queue[0]:
+        await play_next(ctx)
+        await ctx.send(f"`Now Playing: {song_queue[0]['title']}`")
+    else:
+        await leave(ctx)
 
 @client.command()
 async def move(ctx, *query):
