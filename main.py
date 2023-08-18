@@ -109,8 +109,9 @@ def search_playlist(arg):
     else: arg = "".join(arg)
     with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
         info = ydl.extract_info(arg, download=False)
+    song_queue.append({'source': info['entries'][0]['url'], 'title': info['entries'][0]['title']})
     for i in range(1,info['playlist_count']):
-        song_queue.append(info['entries'][i]['url'])
+        song_queue.append({'source': info['entries'][i]['url'], 'title': info['entries'][i]['title']})
     return {'source': info['entries'][0]['url'], 'title': info['entries'][0]['title']}
 
 #Plays the next song in the queue
@@ -140,16 +141,15 @@ async def play(ctx, *arg):
             song_queue.append(song)
         else:
             song = search_playlist(arg)
-
         if voice and voice.is_connected():
             await voice.move_to(channel)
         else: 
             voice = await channel.connect()
-
         if not voice.is_playing():
             voice.play(discord.FFmpegPCMAudio(song['source'], **FFMPEG_OPTIONS), after=lambda e: play_next(ctx))
             voice.is_playing()
         else:
+            song_queue.append(song)
             await ctx.send("Added to queue")
     else:
         await ctx.send("You're not connected to any channel!")
