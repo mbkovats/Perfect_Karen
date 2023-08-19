@@ -75,7 +75,7 @@ def search_first_playlist(query, YDL_OPTIONS):
     else: query = "".join(query)
     with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
         info = ydl.extract_info(query, download=False)
-    song_queue.append({'source': info['entries'][0]['url'], 'title': info['entries'][0]['title']})
+    song_queue.append({'source': info['entries'][0]['url'], 'title': info['entries'][0]['title'], 'duration': info['entries'][0]['duration']})
     return {'source': info['entries'][0]['url'], 'title': info['entries'][0]['title'], 'duration': info['entries'][0]['duration']}
 
 def search_playlist(query, YDL_OPTIONS):
@@ -157,7 +157,7 @@ async def skip(ctx):
     voice = get(client.voice_clients, guild=ctx.guild)
     voice.pause()
     if song_queue[0]:
-        await play_next(ctx)
+        play_next(ctx)
         await ctx.send(f"`Now Playing: {song_queue[0]['title']} {song_queue[0]['duration']}`")
     else:
         await leave(ctx)
