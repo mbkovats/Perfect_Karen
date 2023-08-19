@@ -5,7 +5,7 @@ import os
 from dotenv import load_dotenv
 import random
 import yt_dlp
-import requests
+import math
 
 load_dotenv()
 BOT_TOKEN = os.getenv('TOKEN')
@@ -54,36 +54,24 @@ async def noah(ctx):
     ctx.voice_client.play(source, after=lambda e: print(f'Player error: {e}') if e else None)
 
 def search(query):
-    try: requests.get("".join(query))
-    except: query = " ".join(query)
-    else: query = "".join(query)
     with yt_dlp.YoutubeDL(YDL_OPTION) as ydl:
-        info = ydl.extract_info(f"ytsearch:{query}", download=False)['entries'][0]
+        info = ydl.extract_info(f"ytsearch:{query[0]}", download=False)['entries'][0]
     return {'source': info['url'], 'title': info['title'], 'duration': info['duration']}
 
 def link(query):
-    try: requests.get("".join(query))
-    except: query = " ".join(query)
-    else: query = "".join(query)
     with yt_dlp.YoutubeDL(YDL_OPTION) as ydl:
-        info = ydl.extract_info(query, download=False)
+        info = ydl.extract_info(query[0], download=False)
     return {'source': info['url'], 'title': info['title'], 'duration': info['duration']}
 
 def search_first_playlist(query, YDL_OPTIONS):
-    try: requests.get("".join(query))
-    except: query = " ".join(query)
-    else: query = "".join(query)
     with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
-        info = ydl.extract_info(query, download=False)
+        info = ydl.extract_info(query[0], download=False)
     song_queue.append({'source': info['entries'][0]['url'], 'title': info['entries'][0]['title'], 'duration': info['entries'][0]['duration']})
     return {'source': info['entries'][0]['url'], 'title': info['entries'][0]['title'], 'duration': info['entries'][0]['duration']}
 
 def search_playlist(query, YDL_OPTIONS):
-    try: requests.get("".join(query))
-    except: query = " ".join(query)
-    else: query = "".join(query)
     with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
-        info = ydl.extract_info(query, download=False)
+        info = ydl.extract_info(query[0], download=False)
     for i in range(info['playlist_count'] - 1):
         song_queue.append({'source': info['entries'][i]['url'], 'title': info['entries'][i]['title'], 'duration': info['entries'][i]['duration']})
 
@@ -126,25 +114,21 @@ async def play(ctx, *query):
         if not voice.is_playing():
             voice.play(discord.FFmpegPCMAudio(song['source'], **FFMPEG_OPTIONS), after=lambda e: play_next(ctx))
             voice.is_playing()
-            await ctx.send(f"`Now Playing: {song['title']} {song_queue[0]['duration']}`")
+            await ctx.send(f"`Now Playing: {song['title']} {math.floor(song_queue[0]['duration']/60)}:{song_queue[0]['duration'] % 60}`")
             if query[0].find("playlist") != -1:
                 YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist':'True', 'playliststart': '2'}
                 search_playlist(query, YDL_OPTIONS)
         elif query[0].find("playlist") == -1:
             await ctx.send(f"`Added {song['title']} to queue`")
-            YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist':'True', 'playlist_items': '1'}
-            search_first_playlist(query, YDL_OPTIONS)
-            YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist':'True', 'playliststart': '2'}
-            search_playlist(query, YDL_OPTIONS)
     else:
         await ctx.send("You're not connected to any channel!")
 
 @client.command()
 async def queue(ctx):
     out = ""
-    out += (f"`Playing: {song_queue[0]['title']} {song_queue[0]['duration']}`")
+    out += (f"`Playing: {song_queue[0]['title']} {math.floor(song_queue[0]['duration']/60)}:{song_queue[0]['duration'] % 60}`\n")
     for i in range(1,len(song_queue)):
-        out = out + (f"`{i}. {song_queue[i]['title']} {song_queue[i]['duration']}`\n")
+        out = out + (f"`{i}. {song_queue[i]['title']} {math.floor(song_queue[i]['duration']/60)}:{song_queue[i]['duration'] % 60}`\n")
     await ctx.send(f"{out}")
 
 @client.command()
@@ -158,7 +142,7 @@ async def skip(ctx):
     voice.pause()
     if song_queue[0]:
         play_next(ctx)
-        await ctx.send(f"`Now Playing: {song_queue[0]['title']} {song_queue[0]['duration']}`")
+        await ctx.send(f"`Now Playing: {song_queue[0]['title']} {math.floor(song_queue[0]['duration']/60)}:{song_queue[0]['duration'] % 60}`")
     else:
         await leave(ctx)
 
