@@ -55,7 +55,7 @@ async def noah(ctx):
 
 def search(query):
     with yt_dlp.YoutubeDL(YDL_OPTION) as ydl:
-        info = ydl.extract_info(f"ytsearch:{query[0]}", download=False)['entries'][0]
+        info = ydl.extract_info(f"ytsearch:{' '.join(query)}", download=False)['entries'][0]
     return {'source': info['url'], 'title': info['title'], 'duration': info['duration']}
 
 def link(query):
@@ -156,5 +156,23 @@ async def loop(ctx):
     global repeat
     repeat = repeat ^ 1
     await ctx.send("`Looped!`")
+
+@client.command()
+async def pause(ctx):
+    voice = get(client.voice_clients, guild=ctx.guild)
+    if voice.is_playing():
+        voice.pause()
+        await ctx.send("`Paused`")
+    else:
+        await ctx.send("`The bot is already paused or there is nothing playing`")
+    
+@client.command()
+async def resume(ctx):
+    voice = get(client.voice_clients, guild=ctx.guild)
+    if voice.is_paused():
+        voice.resume()
+        await ctx.send(f"`Now Playing: {song_queue[0]['title']} {math.floor(song_queue[0]['duration']/60)}:{song_queue[0]['duration'] % 60}`")
+    else:
+        await ctx.send("`The bot isn't paused!`")
 
 client.run(BOT_TOKEN)
